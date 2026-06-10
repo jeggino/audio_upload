@@ -101,10 +101,6 @@ if mode == "Upload":
 # ========================= EXPLORE ===========================
 # ============================================================
 
-# ============================================================
-# ========================= EXPLORE ===========================
-# ============================================================
-
 if mode == "Explore":
 
     st.title("Explore Uploaded Audio Files")
@@ -115,25 +111,31 @@ if mode == "Explore":
         st.info("No files uploaded yet.")
         st.stop()
 
-    # 1. AREA FILTER
+    # ---------- CASCADE FILTERING ----------
+
+    # 1. AREA
     all_areas = sorted({r["area"] for r in rows})
-    selected_areas = st.multiselect("Select Area(s)", all_areas, default=all_areas)
+    selected_areas = st.multiselect("Select Area(s)", all_areas)
 
-    filtered = [r for r in rows if r["area"] in selected_areas]
+    filtered = rows
+    if selected_areas:
+        filtered = [r for r in filtered if r["area"] in selected_areas]
 
-    # 2. OBSERVER FILTER (depends on selected areas)
+    # 2. OBSERVER
     all_observers = sorted({r["observer"] for r in filtered})
-    selected_observers = st.multiselect("Select Observer(s)", all_observers, default=all_observers)
+    selected_observers = st.multiselect("Select Observer(s)", all_observers)
 
-    filtered = [r for r in filtered if r["observer"] in selected_observers]
+    if selected_observers:
+        filtered = [r for r in filtered if r["observer"] in selected_observers]
 
-    # 3. DATE FILTER (depends on selected areas + observers)
+    # 3. DATE
     all_dates = sorted({r["obs_date"] for r in filtered})
-    selected_dates = st.multiselect("Select Date(s)", all_dates, default=all_dates)
+    selected_dates = st.multiselect("Select Date(s)", all_dates)
 
-    filtered = [r for r in filtered if r["obs_date"] in selected_dates]
+    if selected_dates:
+        filtered = [r for r in filtered if r["obs_date"] in selected_dates]
 
-    # SUMMARY
+    # ---------- SUMMARY ----------
     st.subheader("Summary")
     st.write(f"**Files found:** {len(filtered)}")
 
@@ -143,33 +145,27 @@ if mode == "Explore":
 
     st.divider()
 
-    # FILE LIST + DOWNLOAD
-    st.subheader("Files")
+    # ---------- DOWNLOAD SELECTED FILES ----------
+    st.subheader("Download Selected Files")
 
-    for r in filtered:
-        file_bytes = supabase.storage.from_(BUCKET_NAME).download(r["path"])
-        st.download_button(
-            label=f"Download {r['file_name']}",
-            data=file_bytes,
-            file_name=r["file_name"],
-            key=r["path"],
-        )
+    if st.button("Prepare ZIP file"):
+        if not filtered:
+            st.warning("No files to download.")
+        else:
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w") as zipf:
+                for r in filtered:
+                    file_bytes = supabase.storage.from_(BUCKET_NAME).download(r["path"])
+                    zipf.writestr(r["file_name"], file_bytes)
 
-    # ZIP DOWNLOAD
-    if filtered:
-        st.subheader("Download All as ZIP")
+            st.success("ZIP ready!")
 
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w") as zipf:
-            for r in filtered:
-                file_bytes = supabase.storage.from_(BUCKET_NAME).download(r["path"])
-                zipf.writestr(r["file_name"], file_bytes)
+            st.download_button(
+                label="Download ZIP",
+                data=zip_buffer.getvalue(),
+                file_name="audio_files.zip",
+            )
 
-        st.download_button(
-            label="Download ZIP",
-            data=zip_buffer.getvalue(),
-            file_name="audio_files.zip",
-        )
 
 
 
