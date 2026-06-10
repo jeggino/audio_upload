@@ -37,7 +37,6 @@ if submitted:
     elif not files:
         st.error("Please select at least one audio file.")
     else:
-        # Create subfolder name: YYYY-MM-DD_area_observer
         folder_name = (
             f"{obs_date.isoformat()}_"
             f"{area.strip().replace(' ', '-')}_"
@@ -54,7 +53,6 @@ if submitted:
             file_path = f"{folder_name}/{f.name}"
 
             try:
-                # Visual progress (Supabase upload is atomic)
                 progress.progress(25)
 
                 supabase.storage.from_(BUCKET_NAME).upload(
@@ -65,7 +63,6 @@ if submitted:
 
                 progress.progress(75)
 
-                # Insert metadata row
                 data = {
                     "observer": observer,
                     "area": area,
@@ -88,5 +85,6 @@ if submitted:
             st.success("Upload finished.")
             for name, status in upload_results:
                 st.write(f"- {name}: {status}")
+
 
 
