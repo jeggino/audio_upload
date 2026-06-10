@@ -101,18 +101,19 @@ if mode == "Upload":
 # ========================= EXPLORE ===========================
 # ============================================================
 
+# ============================================================
+# ========================= EXPLORE ===========================
+# ============================================================
+
 if mode == "Explore":
 
     st.title("Explore Uploaded Audio Files")
 
-    # Load metadata
     rows = supabase.table("audio_files").select("*").execute().data
 
     if not rows:
         st.info("No files uploaded yet.")
         st.stop()
-
-    # ---------- CASCADE FILTERING LOGIC ----------
 
     # 1. AREA FILTER
     all_areas = sorted({r["area"] for r in rows})
@@ -132,25 +133,17 @@ if mode == "Explore":
 
     filtered = [r for r in filtered if r["obs_date"] in selected_dates]
 
-    # ---------- SUMMARY ----------
+    # SUMMARY
     st.subheader("Summary")
     st.write(f"**Files found:** {len(filtered)}")
 
-    # Total size
-    total_bytes = 0
-    for r in filtered:
-        try:
-            file_obj = supabase.storage.from_(BUCKET_NAME).download(r["path"])
-            total_bytes += len(file_obj)
-        except:
-            pass
-
+    total_bytes = sum(r.get("size_bytes", 0) or 0 for r in filtered)
     total_mb = round(total_bytes / (1024 * 1024), 2)
     st.write(f"**Total size:** {total_mb} MB")
 
     st.divider()
 
-    # ---------- FILE LIST + DOWNLOAD ----------
+    # FILE LIST + DOWNLOAD
     st.subheader("Files")
 
     for r in filtered:
@@ -159,10 +152,10 @@ if mode == "Explore":
             label=f"Download {r['file_name']}",
             data=file_bytes,
             file_name=r["file_name"],
-            key=r["path"]
+            key=r["path"],
         )
 
-    # ---------- ZIP DOWNLOAD ----------
+    # ZIP DOWNLOAD
     if filtered:
         st.subheader("Download All as ZIP")
 
@@ -175,8 +168,9 @@ if mode == "Explore":
         st.download_button(
             label="Download ZIP",
             data=zip_buffer.getvalue(),
-            file_name="audio_files.zip"
+            file_name="audio_files.zip",
         )
+
 
 
 
