@@ -30,27 +30,30 @@ if mode == "Upload":
         "Upload large amounts of audio files and store them in a structured way in Supabase Storage."
     )
 
+    OBSERVERS = ["Max", "Mats", "Jan", "Rep", "Guido", "Luigi", "Wout"]
+    AREAS = ["Z1", "Z2/3", "Z4", "Z5", "Z6/7", "Z8", "Z9", "Z10a", "Z10b", "Z11", "Z12", "Z13"]
+
     with st.form("metadata_form"):
-        observer = st.text_input("Observer name")
+        observer = st.selectbox("Observer name", OBSERVERS)
         obs_date = st.date_input("Observation date", value=datetime.date.today())
-        area = st.text_input("Area / Zone")
+        area = st.selectbox("Area / Zone", AREAS)
+
         files = st.file_uploader(
             "Select audio files",
             type=["wav", "mp3", "flac", "m4a", "ogg"],
             accept_multiple_files=True,
         )
+
         submitted = st.form_submit_button("Upload")
 
     if submitted:
-        if not observer or not area:
-            st.error("Please fill in observer and area.")
-        elif not files:
+        if not files:
             st.error("Please select at least one audio file.")
         else:
             folder_name = (
                 f"{obs_date.isoformat()}_"
-                f"{area.strip().replace(' ', '-')}_"
-                f"{observer.strip().replace(' ', '-')}"
+                f"{area.replace(' ', '-')}_"
+                f"{observer.replace(' ', '-')}"
             )
             st.write(f"Subfolder: `{folder_name}`")
 
@@ -61,13 +64,14 @@ if mode == "Upload":
                 progress = st.progress(0)
 
                 file_path = f"{folder_name}/{f.name}"
+                file_bytes = f.getvalue()
 
                 try:
                     progress.progress(25)
 
                     supabase.storage.from_(BUCKET_NAME).upload(
                         file_path,
-                        f.getvalue(),
+                        file_bytes,
                         {"content-type": f.type or "application/octet-stream"},
                     )
 
@@ -80,6 +84,7 @@ if mode == "Upload":
                         "file_name": f.name,
                         "path": file_path,
                         "bucket": BUCKET_NAME,
+                        "size_bytes": len(file_bytes),  # store size for fast filtering
                     }
                     supabase.table("audio_files").insert(data).execute()
 
@@ -95,6 +100,7 @@ if mode == "Upload":
                 st.success("Upload finished.")
                 for name, status in upload_results:
                     st.write(f"- {name}: {status}")
+
 
 
 # ============================================================
