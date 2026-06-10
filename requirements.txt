@@ -1,8 +1,8 @@
-streamlit==1.36.0
-supabase==2.4.6
-gotrue==2.4.4
-postgrest==0.16.8
-realtime==1.0.2
-storage3==0.7.4
+streamlit
+supabase
+gotrue
+postgrest
+realtime
+storage3
 
 
