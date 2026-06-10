@@ -25,7 +25,7 @@ from supabase import create_client, Client
 # ---------- CONFIG ----------
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-BUCKET_NAME = "observation_photos"
+BUCKET_NAME = "audio_uploads"
 
 @st.cache_resource
 def get_supabase_client() -> Client:
