@@ -112,29 +112,27 @@ if mode == "Explore":
         st.info("No files uploaded yet.")
         st.stop()
 
-    # Unique filter values
-    areas = sorted({r["area"] for r in rows})
-    observers = sorted({r["observer"] for r in rows})
-    dates = sorted({r["obs_date"] for r in rows})
+    # ---------- CASCADE FILTERING LOGIC ----------
 
-    # Filters
-    area = st.radio("Select Area", ["All"] + areas)
-    observer = st.radio("Select Observer", ["All"] + observers)
-    date = st.radio("Select Date", ["All"] + dates)
+    # 1. AREA FILTER
+    all_areas = sorted({r["area"] for r in rows})
+    selected_areas = st.multiselect("Select Area(s)", all_areas, default=all_areas)
 
-    # Apply filters
-    filtered = rows
+    filtered = [r for r in rows if r["area"] in selected_areas]
 
-    if area != "All":
-        filtered = [r for r in filtered if r["area"] == area]
+    # 2. OBSERVER FILTER (depends on selected areas)
+    all_observers = sorted({r["observer"] for r in filtered})
+    selected_observers = st.multiselect("Select Observer(s)", all_observers, default=all_observers)
 
-    if observer != "All":
-        filtered = [r for r in filtered if r["observer"] == observer]
+    filtered = [r for r in filtered if r["observer"] in selected_observers]
 
-    if date != "All":
-        filtered = [r for r in filtered if r["obs_date"] == date]
+    # 3. DATE FILTER (depends on selected areas + observers)
+    all_dates = sorted({r["obs_date"] for r in filtered})
+    selected_dates = st.multiselect("Select Date(s)", all_dates, default=all_dates)
 
-    # Summary
+    filtered = [r for r in filtered if r["obs_date"] in selected_dates]
+
+    # ---------- SUMMARY ----------
     st.subheader("Summary")
     st.write(f"**Files found:** {len(filtered)}")
 
@@ -152,7 +150,7 @@ if mode == "Explore":
 
     st.divider()
 
-    # File list + download buttons
+    # ---------- FILE LIST + DOWNLOAD ----------
     st.subheader("Files")
 
     for r in filtered:
@@ -164,7 +162,7 @@ if mode == "Explore":
             key=r["path"]
         )
 
-    # ZIP download
+    # ---------- ZIP DOWNLOAD ----------
     if filtered:
         st.subheader("Download All as ZIP")
 
