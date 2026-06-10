@@ -1,6 +1,8 @@
 import datetime
 import streamlit as st
 from supabase import create_client, Client
+import io
+import zipfile
 
 # ---------- CONFIG ----------
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -13,78 +15,171 @@ def get_supabase_client() -> Client:
 
 supabase = get_supabase_client()
 
-st.title("Audio Uploader to Supabase")
+# ---------- NAVIGATION ----------
+mode = st.radio("Choose mode", ["Upload", "Explore"])
 
-st.markdown(
-    "Upload large amounts of audio files and store them in a structured way in Supabase Storage."
-)
+# ============================================================
+# ========================= UPLOAD ============================
+# ============================================================
 
-# ---------- METADATA FORM ----------
-with st.form("metadata_form"):
-    observer = st.text_input("Observer name")
-    obs_date = st.date_input("Observation date", value=datetime.date.today())
-    area = st.text_input("Area / Zone")
-    files = st.file_uploader(
-        "Select audio files",
-        type=["wav", "mp3", "flac", "m4a", "ogg"],
-        accept_multiple_files=True,
+if mode == "Upload":
+
+    st.title("Audio Uploader to Supabase")
+
+    st.markdown(
+        "Upload large amounts of audio files and store them in a structured way in Supabase Storage."
     )
-    submitted = st.form_submit_button("Upload")
 
-if submitted:
-    if not observer or not area:
-        st.error("Please fill in observer and area.")
-    elif not files:
-        st.error("Please select at least one audio file.")
-    else:
-        folder_name = (
-            f"{obs_date.isoformat()}_"
-            f"{area.strip().replace(' ', '-')}_"
-            f"{observer.strip().replace(' ', '-')}"
+    with st.form("metadata_form"):
+        observer = st.text_input("Observer name")
+        obs_date = st.date_input("Observation date", value=datetime.date.today())
+        area = st.text_input("Area / Zone")
+        files = st.file_uploader(
+            "Select audio files",
+            type=["wav", "mp3", "flac", "m4a", "ogg"],
+            accept_multiple_files=True,
         )
-        st.write(f"Subfolder: `{folder_name}`")
+        submitted = st.form_submit_button("Upload")
 
-        upload_results = []
+    if submitted:
+        if not observer or not area:
+            st.error("Please fill in observer and area.")
+        elif not files:
+            st.error("Please select at least one audio file.")
+        else:
+            folder_name = (
+                f"{obs_date.isoformat()}_"
+                f"{area.strip().replace(' ', '-')}_"
+                f"{observer.strip().replace(' ', '-')}"
+            )
+            st.write(f"Subfolder: `{folder_name}`")
 
-        for f in files:
-            st.write(f"Uploading **{f.name}**...")
-            progress = st.progress(0)
+            upload_results = []
 
-            file_path = f"{folder_name}/{f.name}"
+            for f in files:
+                st.write(f"Uploading **{f.name}**...")
+                progress = st.progress(0)
 
-            try:
-                progress.progress(25)
+                file_path = f"{folder_name}/{f.name}"
 
-                supabase.storage.from_(BUCKET_NAME).upload(
-                    file_path,
-                    f.getvalue(),
-                    {"content-type": f.type or "application/octet-stream"},
-                )
+                try:
+                    progress.progress(25)
 
-                progress.progress(75)
+                    supabase.storage.from_(BUCKET_NAME).upload(
+                        file_path,
+                        f.getvalue(),
+                        {"content-type": f.type or "application/octet-stream"},
+                    )
 
-                data = {
-                    "observer": observer,
-                    "area": area,
-                    "obs_date": obs_date.isoformat(),
-                    "file_name": f.name,
-                    "path": file_path,
-                    "bucket": BUCKET_NAME,
-                }
-                supabase.table("audio_files").insert(data).execute()
+                    progress.progress(75)
 
-                progress.progress(100)
-                upload_results.append((f.name, "OK"))
+                    data = {
+                        "observer": observer,
+                        "area": area,
+                        "obs_date": obs_date.isoformat(),
+                        "file_name": f.name,
+                        "path": file_path,
+                        "bucket": BUCKET_NAME,
+                    }
+                    supabase.table("audio_files").insert(data).execute()
 
-            except Exception as e:
-                progress.progress(100)
-                st.error(f"Error with {f.name}: {e}")
-                upload_results.append((f.name, "Error"))
+                    progress.progress(100)
+                    upload_results.append((f.name, "OK"))
 
-        if upload_results:
-            st.success("Upload finished.")
-            for name, status in upload_results:
-                st.write(f"- {name}: {status}")
+                except Exception as e:
+                    progress.progress(100)
+                    st.error(f"Error with {f.name}: {e}")
+                    upload_results.append((f.name, "Error"))
+
+            if upload_results:
+                st.success("Upload finished.")
+                for name, status in upload_results:
+                    st.write(f"- {name}: {status}")
+
+
+# ============================================================
+# ========================= EXPLORE ===========================
+# ============================================================
+
+if mode == "Explore":
+
+    st.title("Explore Uploaded Audio Files")
+
+    # Load metadata
+    rows = supabase.table("audio_files").select("*").execute().data
+
+    if not rows:
+        st.info("No files uploaded yet.")
+        st.stop()
+
+    # Unique filter values
+    areas = sorted({r["area"] for r in rows})
+    observers = sorted({r["observer"] for r in rows})
+    dates = sorted({r["obs_date"] for r in rows})
+
+    # Filters
+    area = st.radio("Select Area", ["All"] + areas)
+    observer = st.radio("Select Observer", ["All"] + observers)
+    date = st.radio("Select Date", ["All"] + dates)
+
+    # Apply filters
+    filtered = rows
+
+    if area != "All":
+        filtered = [r for r in filtered if r["area"] == area]
+
+    if observer != "All":
+        filtered = [r for r in filtered if r["observer"] == observer]
+
+    if date != "All":
+        filtered = [r for r in filtered if r["obs_date"] == date]
+
+    # Summary
+    st.subheader("Summary")
+    st.write(f"**Files found:** {len(filtered)}")
+
+    # Total size
+    total_bytes = 0
+    for r in filtered:
+        try:
+            file_obj = supabase.storage.from_(BUCKET_NAME).download(r["path"])
+            total_bytes += len(file_obj)
+        except:
+            pass
+
+    total_mb = round(total_bytes / (1024 * 1024), 2)
+    st.write(f"**Total size:** {total_mb} MB")
+
+    st.divider()
+
+    # File list + download buttons
+    st.subheader("Files")
+
+    for r in filtered:
+        file_bytes = supabase.storage.from_(BUCKET_NAME).download(r["path"])
+        st.download_button(
+            label=f"Download {r['file_name']}",
+            data=file_bytes,
+            file_name=r["file_name"],
+            key=r["path"]
+        )
+
+    # ZIP download
+    if filtered:
+        st.subheader("Download All as ZIP")
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zipf:
+            for r in filtered:
+                file_bytes = supabase.storage.from_(BUCKET_NAME).download(r["path"])
+                zipf.writestr(r["file_name"], file_bytes)
+
+        st.download_button(
+            label="Download ZIP",
+            data=zip_buffer.getvalue(),
+            file_name="audio_files.zip"
+        )
+
 
 
 
