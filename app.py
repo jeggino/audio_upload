@@ -1,6 +1,3 @@
-
-
-
 import datetime
 import streamlit as st
 from supabase import create_client, Client
@@ -83,12 +80,5 @@ if submitted:
                 upload_results.append((f.name, "OK"))
 
             except Exception as e:
-                progress.progress(100)
-                st.error(f"Error with {f.name}: {e}")
-                upload_results.append((f.name, "Error"))
-
-        if upload_results:
-            st.success("Upload finished.")
-            for name, status in upload_results:
-                st.write(f"- {name}: {status}")
+                progress
 
