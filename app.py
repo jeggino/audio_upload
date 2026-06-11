@@ -184,7 +184,7 @@ if mode == "Explore":
     
         return total_bytes
     
-    size_bytes = get_bucket_size("my-bucket")
+    size_bytes = get_bucket_size(BUCKET_NAME)
     print("Total size:", size_bytes, "bytes")
     print("Total size (MB):", size_bytes / (1024 * 1024))
 
