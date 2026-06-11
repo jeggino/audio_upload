@@ -172,21 +172,21 @@ if mode == "Explore":
                 file_name="audio_files.zip",
             )
 
-
-        def get_bucket_size(bucket_name):
-            # List all files in the bucket (recursively)
-            files = supabase.storage.from_(bucket_name).list("", {"recursive": True})
-        
-            total_bytes = 0
-            for f in files:
-                if "metadata" in f and "size" in f["metadata"]:
-                    total_bytes += f["metadata"]["size"]
-        
-            return total_bytes
-        
-        size_bytes = get_bucket_size("my-bucket")
-        print("Total size:", size_bytes, "bytes")
-        print("Total size (MB):", size_bytes / (1024 * 1024))
+    "---"
+    def get_bucket_size(bucket_name):
+        # List all files in the bucket (recursively)
+        files = supabase.storage.from_(bucket_name).list("", {"recursive": True})
+    
+        total_bytes = 0
+        for f in files:
+            if "metadata" in f and "size" in f["metadata"]:
+                total_bytes += f["metadata"]["size"]
+    
+        return total_bytes
+    
+    size_bytes = get_bucket_size("my-bucket")
+    print("Total size:", size_bytes, "bytes")
+    print("Total size (MB):", size_bytes / (1024 * 1024))
 
 
 
