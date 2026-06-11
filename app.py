@@ -173,20 +173,10 @@ if mode == "Explore":
             )
 
     "---"
-    def get_bucket_size(bucket_name):
-        # List all files in the bucket (recursively)
-        files = supabase.storage.from_(bucket_name).list("", {"recursive": True})
-    
-        total_bytes = 0
-        for f in files:
-            if "metadata" in f and "size" in f["metadata"]:
-                total_bytes += f["metadata"]["size"]
-    
-        return total_bytes
-    
-    size_bytes = get_bucket_size(BUCKET_NAME)
-    print("Total size:", size_bytes, "bytes")
-    print("Total size (MB):", size_bytes / (1024 * 1024))
+    total_bytes_2 = sum(r.get("size_bytes", 0) or 0 for r in rows)
+    total_mb_2 = round(total_bytes_2 / (1024 * 1024), 2)
+    st.write(f"**Total size:** {total_mb_2} MB")
+
 
 
 
