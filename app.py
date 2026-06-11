@@ -3,6 +3,7 @@ import streamlit as st
 from supabase import create_client, Client
 import io
 import zipfile
+import plotly.express as px
 
 # ---------- CONFIG ----------
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -32,6 +33,21 @@ if mode == "Upload":
 
     OBSERVERS = ["Max", "Mats", "Jan", "Rep", "Guido", "Luigi", "Wout"]
     AREAS = ["Z1", "Z2/3", "Z4", "Z5", "Z6/7", "Z8", "Z9", "Z10a", "Z10b", "Z11", "Z12", "Z13"]
+
+    
+    used = 5
+    total = 10  # your quota in GB
+    free = total - used
+    
+    fig = px.pie(
+        values=[used, free],
+        names=["Used", "Free"],
+        hole=0.5,
+        color=["Used", "Free"],
+        color_discrete_map={"Used": "red", "Free": "green"}
+    )
+    
+    st.plotly_chart(fig)
 
     with st.form("metadata_form"):
         observer = st.selectbox("Observer name", OBSERVERS)
