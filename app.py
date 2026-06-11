@@ -34,9 +34,12 @@ if mode == "Upload":
     OBSERVERS = ["Max", "Mats", "Jan", "Rep", "Guido", "Luigi", "Wout"]
     AREAS = ["Z1", "Z2/3", "Z4", "Z5", "Z6/7", "Z8", "Z9", "Z10a", "Z10b", "Z11", "Z12", "Z13"]
 
+
+    rows = supabase.table("audio_files").select("*").execute().data
+    bytes_value = sum(r.get("size_bytes", 0) or 0 for r in rows)
     
-    used = 5
-    total = 10  # your quota in GB
+    used = round(bytes_value / (1024**3))
+    total = 90  # your quota in GB
     free = total - used
     
     fig = px.pie(
@@ -190,6 +193,7 @@ if mode == "Explore":
 
     "---"
     total_bytes_2 = sum(r.get("size_bytes", 0) or 0 for r in rows)
+    
     total_mb_2 = round(total_bytes_2 / (1024 * 1024), 2)
     st.write(f"**Total size:** {total_mb_2} MB")
 
