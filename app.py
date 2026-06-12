@@ -4,6 +4,9 @@ from supabase import create_client, Client
 import io
 import zipfile
 import plotly.express as px
+import altair as alt
+import pandas as pd
+import numpy as np
 
 # ---------- CONFIG ----------
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -38,19 +41,65 @@ if mode == "Upload":
     rows = supabase.table("audio_files").select("*").execute().data
     bytes_value = sum(r.get("size_bytes", 0) or 0 for r in rows)
     
-    used = round(bytes_value / (1024**3))
-    total = 90  # your quota in GB
-    free = total - used
+   
+
+
+    def altair_gauge(value, max_value=100, title="Storage Usage"):
+        # Normalize
+        percentage = value / max_value
     
-    fig = px.pie(
-        values=[used, free],
-        names=["Used", "Free"],
-        hole=0.5,
-        color=["Used", "Free"],
-        color_discrete_map={"Used": "red", "Free": "green"}
-    )
+        # Data for the gauge background
+        source = pd.DataFrame({
+            "start": [0],
+            "end": [percentage],
+            "full": [1]
+        })
     
-    st.plotly_chart(fig)
+        # Arc for used portion
+        used_arc = alt.Chart(source).mark_arc(innerRadius=60, outerRadius=100).encode(
+            theta=alt.Theta("end:Q", stack=False, scale=alt.Scale(domain=[0, 1])),
+            color=alt.value("#4CAF50")  # green
+        )
+    
+        # Arc for remaining portion
+        remaining_arc = alt.Chart(source).mark_arc(innerRadius=60, outerRadius=100).encode(
+            theta=alt.Theta("full:Q", stack=False, scale=alt.Scale(domain=[0, 1])),
+            color=alt.value("#E0E0E0")
+        )
+    
+        # Needle
+        needle_angle = percentage * np.pi
+        needle_x = np.cos(needle_angle)
+        needle_y = np.sin(needle_angle)
+    
+        needle = alt.Chart(pd.DataFrame({
+            "x": [0, needle_x],
+            "y": [0, needle_y]
+        })).mark_line(color="red", strokeWidth=3).encode(
+            x="x:Q",
+            y="y:Q"
+        )
+    
+        # Text in the center
+        text = alt.Chart(pd.DataFrame({
+            "text": [f"{value:.2f} / {max_value} GB"]
+        })).mark_text(size=22, fontWeight="bold", dy=20).encode(
+            text="text:N"
+        )
+    
+        return (remaining_arc + used_arc + needle + text).properties(
+            width=400,
+            height=250,
+            title=title
+        )
+    
+
+    used_gb = round(bytes_value / (1024**3))
+    total_gb = 90  # your quota in GB
+    # free = total - used
+    
+    st.altair_chart(altair_gauge(used_gb, total_gb, "Supabase Storage Usage"))
+
 
     with st.form("metadata_form"):
         observer = st.selectbox("Observer name", OBSERVERS)
