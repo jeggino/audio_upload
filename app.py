@@ -98,7 +98,7 @@ if mode == "Upload":
     total_gb = 90  # your quota in GB
     # free = total - used
     
-    st.altair_chart(altair_gauge(used_gb, total_gb, "Supabase Storage Usage"))
+    # st.altair_chart(altair_gauge(used_gb, total_gb, "Supabase Storage Usage"))
 
 
     with st.form("metadata_form"):
